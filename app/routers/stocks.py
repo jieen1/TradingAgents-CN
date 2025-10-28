@@ -253,7 +253,7 @@ async def get_kline(code: str, period: str = "day", limit: int = 120, adj: str =
             # 添加 10 秒超时保护
             items, source = await asyncio.wait_for(
                 asyncio.to_thread(mgr.get_kline_with_fallback, code_padded, period, limit, adj_norm),
-                timeout=10.0
+                timeout=20.0
             )
         except asyncio.TimeoutError:
             logger.error(f"❌ 外部 API 获取 K 线超时（10秒）")

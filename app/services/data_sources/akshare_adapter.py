@@ -277,6 +277,7 @@ class AKShareAdapter(DataSourceAdapter):
         if not self.is_available():
             return None
         if 'HK' in code:
+            logger.info(f"港股标的，使用港股数据接口：code: {code}")
             try:
                 import akshare as ak
                 code5 = str(code).replace('.HK', '').zfill(5)
