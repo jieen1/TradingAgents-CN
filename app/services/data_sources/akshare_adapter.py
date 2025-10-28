@@ -276,6 +276,53 @@ class AKShareAdapter(DataSourceAdapter):
         """AKShare K-line as fallback. Try daily/week/month via stock_zh_a_hist; minutes via stock_zh_a_minute."""
         if not self.is_available():
             return None
+        if 'HK' in code:
+            try:
+                import akshare as ak
+                code5 = str(code).replace('.HK', '').zfill(5)
+                items = []
+                if period in ("day", "week", "month"):
+                    period_map = {"day": "daily", "week": "weekly", "month": "monthly"}
+                    adjust_map = {None: "", "qfq": "qfq", "hfq": "hfq"}
+                    df = ak.stock_hk_hist(symbol=code5, period=period_map[period], adjust=adjust_map.get(adj, ""))
+                    if df is None or getattr(df, 'empty', True):
+                        return None
+                    df = df.tail(limit)
+                    for _, row in df.iterrows():
+                        items.append({
+                            "time": str(row.get('日期') or row.get('date') or ''),
+                            "open": self._safe_float(row.get('开盘') or row.get('open')),
+                            "high": self._safe_float(row.get('最高') or row.get('high')),
+                            "low": self._safe_float(row.get('最低') or row.get('low')),
+                            "close": self._safe_float(row.get('收盘') or row.get('close')),
+                            "volume": self._safe_float(row.get('成交量') or row.get('volume')),
+                            "amount": self._safe_float(row.get('成交额') or row.get('amount')),
+                        })
+                    return items
+                else:
+                    # minutes
+                    per_map = {"5m": "5", "15m": "15", "30m": "30", "60m": "60"}
+                    if period not in per_map:
+                        return None
+                    df = ak.stock_hk_hist_min_em(symbol=code5, period=per_map[period],
+                                              adjust=adj if adj in ("qfq", "hfq") else "")
+                    if df is None or getattr(df, 'empty', True):
+                        return None
+                    df = df.tail(limit)
+                    for _, row in df.iterrows():
+                        items.append({
+                            "time": str(row.get('时间') or row.get('day') or ''),
+                            "open": self._safe_float(row.get('开盘') or row.get('open')),
+                            "high": self._safe_float(row.get('最高') or row.get('high')),
+                            "low": self._safe_float(row.get('最低') or row.get('low')),
+                            "close": self._safe_float(row.get('收盘') or row.get('close')),
+                            "volume": self._safe_float(row.get('成交量') or row.get('volume')),
+                            "amount": self._safe_float(row.get('成交额') or row.get('amount')),
+                        })
+                    return items
+            except Exception as e:
+                logger.error(f"AKShare get_kline failed: {e}")
+                return None
         try:
             import akshare as ak
             code6 = str(code).zfill(6)
