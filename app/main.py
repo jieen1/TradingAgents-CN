@@ -455,15 +455,17 @@ async def lifespan(app: FastAPI):
         logger.info("🔄 配置新闻数据同步任务...")
 
         from app.worker.akshare_sync_service import get_akshare_sync_service
+        from app.worker.news_data_sync_service import get_news_data_sync_service
 
         async def run_news_sync():
-            """运行新闻同步任务 - 使用AKShare同步所有股票新闻"""
+            """运行新闻同步任务 - 使用TuShare同步所有股票新闻"""
             try:
-                logger.info("📰 开始新闻数据同步（AKShare）...")
-                service = await get_akshare_sync_service()
-                result = await service.sync_news_data(
-                    symbols=None,  # None表示同步所有股票
-                    max_news_per_stock=settings.NEWS_SYNC_MAX_PER_SOURCE
+                logger.info("📰 开始新闻数据同步（TuShare）...")
+                # service = await get_akshare_sync_service()
+                sync_service = await get_news_data_sync_service()
+                result = await sync_service.sync_stock_news(
+                    data_sources=['tushare'],
+                    max_news_per_source=settings.NEWS_SYNC_MAX_PER_SOURCE
                 )
                 logger.info(
                     f"✅ 新闻同步完成: "
@@ -480,7 +482,7 @@ async def lifespan(app: FastAPI):
             run_news_sync,
             CronTrigger.from_crontab(settings.NEWS_SYNC_CRON, timezone=settings.TIMEZONE),
             id="news_sync",
-            name="新闻数据同步（AKShare）"
+            name="新闻数据同步（TuShare）"
         )
         if not settings.NEWS_SYNC_ENABLED:
             scheduler.pause_job("news_sync")
