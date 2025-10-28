@@ -276,8 +276,8 @@ class AKShareAdapter(DataSourceAdapter):
         """AKShare K-line as fallback. Try daily/week/month via stock_zh_a_hist; minutes via stock_zh_a_minute."""
         if not self.is_available():
             return None
+        logger.info(f"=========查询标的：code: {code}的K线信息！")
         if 'HK' in code:
-            logger.info(f"港股标的，使用港股数据接口：code: {code}")
             try:
                 import akshare as ak
                 code5 = str(code).replace('.HK', '').zfill(5)
