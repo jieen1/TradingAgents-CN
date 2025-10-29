@@ -152,7 +152,10 @@ class AKShareSyncService:
                 
                 # 获取详细基础信息
                 basic_info = await self.provider.get_stock_basic_info(code)
-                
+
+                if basic_info and basic_info.get("name").startswith('股票'):
+                    basic_info['name'] = stock_info["name"]
+
                 if basic_info:
                     # 转换为字典格式
                     if hasattr(basic_info, 'model_dump'):

@@ -174,7 +174,10 @@ async def sync_stock_basic_info(
                 try:
                     logger.info(f"   [{i}/{len(failed_stocks)}] 重试 {code}...")
                     basic_info = await provider.get_stock_basic_info(code)
-                    
+
+                    if basic_info and basic_info.get("name").startswith('股票'):
+                        basic_info['name'] = stock["name"]
+
                     if basic_info:
                         basic_info["symbol"] = code
                         basic_info["updated_at"] = datetime.utcnow()

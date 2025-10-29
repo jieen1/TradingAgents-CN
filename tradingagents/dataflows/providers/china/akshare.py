@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List, Optional, Union
 import pandas as pd
 
+from tradingagents.utils import stock_utils
 from ..base_provider import BaseStockDataProvider
 
 logger = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ class AKShareProvider(BaseStockDataProvider):
 
         try:
             logger.info("📋 获取AKShare股票列表（同步）...")
-            stock_df = self.ak.stock_info_a_code_name()
+            stock_df = self.ak.stock_zh_ah_name()
 
             if stock_df is None or stock_df.empty:
                 logger.warning("⚠️ AKShare股票列表为空")
@@ -113,7 +114,7 @@ class AKShareProvider(BaseStockDataProvider):
 
             # 使用线程池异步获取股票列表，添加超时保护
             def fetch_stock_list():
-                return self.ak.stock_info_a_code_name()
+                return self.ak.stock_zh_ah_name()
 
             stock_df = await asyncio.to_thread(fetch_stock_list)
 
@@ -125,8 +126,8 @@ class AKShareProvider(BaseStockDataProvider):
             stock_list = []
             for _, row in stock_df.iterrows():
                 stock_list.append({
-                    "code": str(row.get("code", "")),
-                    "name": str(row.get("name", "")),
+                    "code": str(row.get("code", row.get("代码", ""))),
+                    "name": str(row.get("name", row.get("名称", ""))),
                     "source": "akshare"
                 })
 
@@ -158,7 +159,25 @@ class AKShareProvider(BaseStockDataProvider):
             
             if not stock_info:
                 logger.warning(f"⚠️ 未找到{code}的基础信息")
-                return None
+                if stock_utils.is_hk_stock(code):
+                    basic_info = {
+                        "code": code,
+                        "name": stock_info.get("name", f"股票{code}"),
+                        "area": "未知",
+                        "industry": "未知",
+                        "market": self._determine_market(code),
+                        "list_date": "",
+                        # 扩展字段
+                        "full_symbol": self._get_full_symbol(code),
+                        "market_info": self._get_market_info(code),
+                        "data_source": "akshare",
+                        "last_sync": datetime.now(timezone.utc),
+                        "sync_status": "success"
+                    }
+                    logger.debug(f"✅ {code}港股基础信息获取成功")
+                    return basic_info
+                else:
+                    return None
             
             # 转换为标准化字典
             basic_info = {
@@ -276,6 +295,8 @@ class AKShareProvider(BaseStockDataProvider):
             return "深圳证券交易所"
         elif code.startswith('8'):
             return "北京证券交易所"
+        elif stock_utils.is_hk_stock(code):
+            return "香港交易所"
         else:
             return "未知市场"
     
@@ -303,6 +324,8 @@ class AKShareProvider(BaseStockDataProvider):
             return f"{code}.SZ"
         elif code.startswith(('8', '4')):  # 北京证券交易所（增加4开头的新三板）
             return f"{code}.BJ"
+        elif stock_utils.is_hk_stock(code):
+            return f"{code}.HK"
         else:
             # 无法识别的代码，返回原始代码（确保不为空）
             return code if code else ""
@@ -331,6 +354,14 @@ class AKShareProvider(BaseStockDataProvider):
                 "exchange": "BSE",
                 "exchange_name": "北京证券交易所", 
                 "currency": "CNY",
+                "timezone": "Asia/Shanghai"
+            }
+        elif stock_utils.is_hk_stock(code):
+            return {
+                "market_type": "港股",
+                "exchange": "SEHK",
+                "exchange_name": "香港交易所",
+                "currency": "HKD",
                 "timezone": "Asia/Shanghai"
             }
         else:
