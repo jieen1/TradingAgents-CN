@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timedelta
 import pandas as pd
 
+from tradingagents.utils import stock_utils
 from .base import DataSourceAdapter
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class AKShareAdapter(DataSourceAdapter):
             logger.info("AKShare: Fetching stock list with real names from stock_info_a_code_name()...")
 
             # 使用 AKShare 的 stock_info_a_code_name 接口获取股票代码和名称
-            df = ak.stock_info_a_code_name()
+            df = ak.stock_zh_ah_name()
 
             if df is None or df.empty:
                 logger.warning("AKShare: stock_info_a_code_name() returned empty data")
@@ -71,6 +72,8 @@ class AKShareAdapter(DataSourceAdapter):
                     return f"{code}.SZ"
                 elif code.startswith(('8', '4')):
                     return f"{code}.BJ"
+                elif stock_utils.is_hk_stock(code):
+                    return f"{code}.HK"
                 else:
                     return f"{code}.SZ"  # 默认深圳
 
@@ -78,6 +81,8 @@ class AKShareAdapter(DataSourceAdapter):
                 """根据股票代码判断市场"""
                 if not code:
                     return ""
+                if stock_utils.is_hk_stock(code):
+                    return "港股"
                 code = str(code).zfill(6)
                 if code.startswith('000'):
                     return '主板'

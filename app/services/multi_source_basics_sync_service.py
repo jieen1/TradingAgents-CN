@@ -20,7 +20,7 @@ from pymongo import UpdateOne
 
 from app.core.database import get_mongo_db
 from app.services.basics_sync import add_financial_metrics as _add_financial_metrics_util
-
+from tradingagents.utils import stock_utils
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +189,8 @@ class MultiSourceBasicsSyncService:
                             sse = "深圳证券交易所"
                         elif ts_code.endswith(".BJ"):
                             sse = "北京证券交易所"
+                        elif stock_utils.is_hk_stock(code):
+                            sse = "香港交易所"
                         else:
                             sse = "未知"
                     else:
